@@ -649,6 +649,38 @@ section {
     margin-bottom: var(--spacing-2);
 }
 
+.developer-credit {
+    position: relative;
+    font-size: var(--font-size-sm);
+    background: linear-gradient(135deg, var(--primary-green), var(--accent-green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 500;
+    padding: var(--spacing-2) var(--spacing-4);
+    border: 1px solid var(--primary-green);
+    border-radius: var(--radius-lg);
+    display: inline-block;
+    margin-top: var(--spacing-4);
+    transition: all 0.3s ease;
+}
+
+.developer-credit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+    border-color: var(--accent-green);
+}
+
+.developer-name {
+    font-weight: 700;
+    font-size: var(--font-size-base);
+    background: linear-gradient(135deg, var(--primary-green), var(--accent-green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .nav-menu {
