@@ -1,12 +1,57 @@
-// DOM Content Loaded Event
+// DOM Content Loaded Event with error handling
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize all functionality
-    initNavigation();
-    initScrollEffects();
-    initAnimations();
-    initMobileMenu();
-    initPublicationsBook();
+    try {
+        // Initialize all functionality
+        initNavigation();
+        initScrollEffects();
+        initAnimations();
+        initMobileMenu();
+        
+        // Add delay for publications book to ensure everything is loaded
+        setTimeout(function() {
+            try {
+                initPublicationsBook();
+            } catch (error) {
+                console.error('Error initializing publications book:', error);
+            }
+        }, 100);
+        
+    } catch (error) {
+        console.error('Error during initialization:', error);
+    }
 });
+
+// Also run on window load as backup
+window.addEventListener('load', function() {
+    try {
+        // Re-initialize publications book if it failed before
+        if (!document.querySelector('#publicationsBook .book-pages')) {
+            setTimeout(function() {
+                try {
+                    console.log('Attempting to re-initialize publications book...');
+                    initPublicationsBook();
+                } catch (error) {
+                    console.error('Error re-initializing publications book:', error);
+                }
+            }, 200);
+        }
+    } catch (error) {
+        console.error('Error during window load:', error);
+    }
+});
+
+// Additional fallback for GitHub Pages - run after a longer delay
+setTimeout(function() {
+    try {
+        const bookPages = document.querySelector('#publicationsBook .book-pages');
+        if (!bookPages || bookPages.children.length === 0) {
+            console.log('Fallback initialization for GitHub Pages...');
+            initPublicationsBook();
+        }
+    } catch (error) {
+        console.error('Error in fallback initialization:', error);
+    }
+}, 1000);
 
 // Navigation functionality
 function initNavigation() {
@@ -405,6 +450,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Publications Book Functionality
 function initPublicationsBook() {
+    console.log('Initializing publications book...');
+    
+    // Check if required elements exist
+    const bookElement = document.getElementById('publicationsBook');
+    const bookPagesElement = document.getElementById('bookPages');
+    const pageIndicatorElement = document.getElementById('pageIndicator');
+    
+    if (!bookElement || !bookPagesElement || !pageIndicatorElement) {
+        console.error('Required book elements not found:', {
+            book: !!bookElement,
+            bookPages: !!bookPagesElement,
+            pageIndicator: !!pageIndicatorElement
+        });
+        return;
+    }
+    
+    console.log('Book elements found, proceeding with initialization...');
+    
     const publicationsData = [
         {
             title: "Optimization of k-out-of-n:G System Reliability with Imperfect Switching",
@@ -585,15 +648,24 @@ function initPublicationsBook() {
         return Math.ceil(publicationsData.length / getPublicationsPerPage());
     }
 
-    const book = document.getElementById('publicationsBook');
-    const bookPages = document.getElementById('bookPages');
-    const pageIndicator = document.getElementById('pageIndicator');
+    const book = bookElement;
+    const bookPages = bookPagesElement;
+    const pageIndicator = pageIndicatorElement;
 
     // Initialize book
     function initBook() {
-        generatePages();
-        updateBookDisplay();
-        setupEventListeners();
+        try {
+            console.log('Starting book initialization...');
+            generatePages();
+            console.log('Pages generated');
+            updateBookDisplay();
+            console.log('Display updated');
+            setupEventListeners();
+            console.log('Event listeners set up');
+        } catch (error) {
+            console.error('Error in initBook:', error);
+            throw error;
+        }
     }
 
     // Generate all pages
@@ -683,20 +755,33 @@ function initPublicationsBook() {
 
     // Setup event listeners
     function setupEventListeners() {
-        // Book cover click to open
-        const bookCover = book.querySelector('.book-cover');
-        bookCover.addEventListener('click', openBook);
+        try {
+            console.log('Setting up event listeners...');
+            
+            // Book cover click to open
+            const bookCover = book.querySelector('.book-cover');
+            if (bookCover) {
+                bookCover.addEventListener('click', openBook);
+                console.log('Book cover click listener added');
+            } else {
+                console.error('Book cover not found');
+            }
 
-        // Removed navigation buttons - now using gesture controls
+            // Removed navigation buttons - now using gesture controls
 
-        // Mouse drag functionality for desktop
-        setupMouseDrag();
-        
-        // Touch swipe functionality for mobile/tablets
-        setupTouchSwipe();
-        
-        // Mobile scroll fix for blank pages
-        setupMobileScrollFix();
+            // Mouse drag functionality for desktop
+            setupMouseDrag();
+            
+            // Touch swipe functionality for mobile/tablets
+            setupTouchSwipe();
+            
+            // Mobile scroll fix for blank pages
+            setupMobileScrollFix();
+            
+            console.log('Event listeners setup complete');
+        } catch (error) {
+            console.error('Error setting up event listeners:', error);
+        }
 
         // Keyboard navigation
         document.addEventListener('keydown', function(e) {
@@ -723,14 +808,22 @@ function initPublicationsBook() {
 
     // Mouse drag functionality
     function setupMouseDrag() {
-        let isDragging = false;
-        let startX = 0;
-        let currentX = 0;
-        let dragThreshold = 80; // reduced threshold for easier triggering
-        let hasStartedDrag = false; // Track if drag has actually started
-        
-        // Use the book container instead of just bookPages
-        const dragArea = book;
+        try {
+            console.log('Setting up mouse drag...');
+            
+            let isDragging = false;
+            let startX = 0;
+            let currentX = 0;
+            let dragThreshold = 80; // reduced threshold for easier triggering
+            let hasStartedDrag = false; // Track if drag has actually started
+            
+            // Use the book container instead of just bookPages
+            const dragArea = book;
+            
+            if (!dragArea) {
+                console.error('Drag area not found');
+                return;
+            }
         
         dragArea.addEventListener('mousedown', function(e) {
             if (!book.classList.contains('opened')) return;
@@ -820,6 +913,12 @@ function initPublicationsBook() {
                 e.preventDefault();
             }
         });
+        
+        console.log('Mouse drag setup complete');
+        
+        } catch (error) {
+            console.error('Error setting up mouse drag:', error);
+        }
     }
 
     // Add scroll listener for mobile to fix blank page issue
@@ -839,16 +938,24 @@ function initPublicationsBook() {
 
     // Touch swipe functionality
     function setupTouchSwipe() {
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let touchEndX = 0;
-        let touchEndY = 0;
-        let swipeThreshold = 40; // reduced threshold for easier swiping
-        let isScrolling = false;
-        let isSwiping = false;
-        
-        // Use the entire book area for touch events
-        const touchArea = book;
+        try {
+            console.log('Setting up touch swipe...');
+            
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchEndX = 0;
+            let touchEndY = 0;
+            let swipeThreshold = 40; // reduced threshold for easier swiping
+            let isScrolling = false;
+            let isSwiping = false;
+            
+            // Use the entire book area for touch events
+            const touchArea = book;
+            
+            if (!touchArea) {
+                console.error('Touch area not found');
+                return;
+            }
         
         touchArea.addEventListener('touchstart', function(e) {
             if (!book.classList.contains('opened')) return;
@@ -932,6 +1039,12 @@ function initPublicationsBook() {
             bookPages.style.transition = '';
             bookPages.style.transform = '';
             bookPages.style.opacity = '';
+        }
+        
+        console.log('Touch swipe setup complete');
+        
+        } catch (error) {
+            console.error('Error setting up touch swipe:', error);
         }
     }
 
@@ -1134,7 +1247,29 @@ function initPublicationsBook() {
     });
 
     // Initialize the book
-    initBook();
+    try {
+        initBook();
+        console.log('Publications book initialized successfully');
+        
+        // Add a test function to verify functionality
+        window.testBook = function() {
+            console.log('Testing book functionality...');
+            console.log('Book element:', book);
+            console.log('Book pages:', bookPages);
+            console.log('Current page:', currentPage);
+            console.log('Total pages:', getTotalPages());
+            console.log('Is mobile view:', isMobileView());
+            
+            // Test opening the book
+            if (book && !book.classList.contains('opened')) {
+                console.log('Opening book for test...');
+                openBook();
+            }
+        };
+        
+    } catch (error) {
+        console.error('Error initializing book:', error);
+    }
 }
 
 // Add loading animation
