@@ -738,8 +738,8 @@ section {
 }
 
 .publication-item {
-    margin-bottom: var(--spacing-6);
-    padding-bottom: var(--spacing-4);
+    margin-bottom: var(--spacing-8);
+    padding-bottom: var(--spacing-6);
     border-bottom: 1px solid var(--gray-200);
 }
 
@@ -751,28 +751,31 @@ section {
     font-size: var(--font-size-lg);
     font-weight: 600;
     color: var(--gray-900);
-    margin-bottom: var(--spacing-3);
-    line-height: 1.4;
+    margin-bottom: var(--spacing-5);
+    line-height: 1.5;
 }
 
 .publication-authors {
     font-size: var(--font-size-sm);
     color: var(--primary-green);
     font-weight: 500;
-    margin-bottom: var(--spacing-2);
+    margin-bottom: var(--spacing-3);
+    line-height: 1.6;
 }
 
 .publication-journal {
     font-size: var(--font-size-sm);
     color: var(--gray-600);
     font-style: italic;
-    margin-bottom: var(--spacing-2);
+    margin-bottom: var(--spacing-3);
+    line-height: 1.5;
 }
 
 .publication-details {
     font-size: var(--font-size-sm);
     color: var(--gray-500);
-    margin-bottom: var(--spacing-2);
+    margin-bottom: var(--spacing-5);
+    line-height: 1.5;
 }
 
 .publication-citation {
@@ -780,9 +783,11 @@ section {
     color: var(--gray-400);
     font-family: 'Courier New', monospace;
     background-color: var(--gray-100);
-    padding: var(--spacing-2);
+    padding: var(--spacing-3);
     border-radius: var(--radius-sm);
     border-left: 3px solid var(--primary-green);
+    margin-top: var(--spacing-4);
+    line-height: 1.4;
 }
 
 .book-controls {
@@ -828,14 +833,19 @@ section {
     border: 2px solid var(--gray-200);
     transform-origin: left center;
     opacity: 0;
-    transition: opacity 0.5s ease-in-out 0.3s, transform 0.3s ease;
+    transition: opacity 0.5s ease-in-out 0.3s;
     overflow: hidden;
     display: flex;
     cursor: grab;
 }
 
-.book-pages:active {
-    cursor: grabbing;
+.book-pages:hover {
+    cursor: grab;
+}
+
+/* Only show grabbing cursor when actually dragging */
+.book-pages.dragging {
+    cursor: grabbing !important;
 }
 
 .book-nav-btn {
@@ -949,19 +959,44 @@ section {
         font-size: var(--font-size-sm);
         border-right: none !important;
         border-left: none !important;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
     
     .book-page.right-page {
-        display: none;
+        display: none !important;
     }
     
     .book-page.left-page {
         left: 0;
         right: 0;
+        display: block;
+    }
+    
+    .book-page.hidden {
+        display: none !important;
+        visibility: hidden;
+        opacity: 0;
     }
     
     .publication-title {
         font-size: var(--font-size-base);
+        margin-bottom: var(--spacing-4);
+        line-height: 1.4;
+    }
+    
+    .publication-details {
+        margin-bottom: var(--spacing-4);
+    }
+    
+    .publication-citation {
+        margin-top: var(--spacing-3);
+        padding: var(--spacing-2);
     }
     
     .cover-content h3 {
@@ -1039,19 +1074,45 @@ section {
         font-size: var(--font-size-xs);
         border-right: none !important;
         border-left: none !important;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
     
     .book-page.right-page {
-        display: none;
+        display: none !important;
     }
     
     .book-page.left-page {
         left: 0;
         right: 0;
+        display: block;
+    }
+    
+    .book-page.hidden {
+        display: none !important;
+        visibility: hidden;
+        opacity: 0;
     }
     
     .publication-title {
         font-size: var(--font-size-sm);
+        margin-bottom: var(--spacing-3);
+        line-height: 1.3;
+    }
+    
+    .publication-details {
+        margin-bottom: var(--spacing-3);
+    }
+    
+    .publication-citation {
+        margin-top: var(--spacing-2);
+        padding: var(--spacing-2);
+        line-height: 1.3;
     }
     
     .book-header h4 {

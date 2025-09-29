@@ -724,15 +724,15 @@ function initPublicationsBook() {
         let startX = 0;
         let currentX = 0;
         let dragThreshold = 100; // minimum distance to trigger page turn
+        let hasStartedDrag = false; // Track if drag has actually started
         
         bookPages.addEventListener('mousedown', function(e) {
             if (!book.classList.contains('opened')) return;
             
             isDragging = true;
+            hasStartedDrag = false;
             startX = e.clientX;
             currentX = e.clientX;
-            bookPages.style.cursor = 'grabbing';
-            bookPages.style.userSelect = 'none';
             
             // Prevent text selection
             e.preventDefault();
@@ -744,12 +744,19 @@ function initPublicationsBook() {
             currentX = e.clientX;
             const deltaX = currentX - startX;
             
-            // Visual feedback during drag
-            const dragDistance = Math.min(Math.abs(deltaX) / dragThreshold, 1);
-            const opacity = 1 - (dragDistance * 0.3);
-            
-            if (Math.abs(deltaX) > 10) {
-                bookPages.style.transform = `translateX(${deltaX * 0.1}px)`;
+            // Only start visual feedback if drag distance is significant
+            if (Math.abs(deltaX) > 20) {
+                if (!hasStartedDrag) {
+                    hasStartedDrag = true;
+                    bookPages.classList.add('dragging');
+                    bookPages.style.userSelect = 'none';
+                }
+                
+                // Visual feedback during drag
+                const dragDistance = Math.min(Math.abs(deltaX) / dragThreshold, 1);
+                const opacity = 1 - (dragDistance * 0.15);
+                
+                bookPages.style.transform = `translateX(${deltaX * 0.03}px)`;
                 bookPages.style.opacity = opacity;
             }
         });
@@ -760,13 +767,13 @@ function initPublicationsBook() {
             const deltaX = currentX - startX;
             
             // Reset visual state
-            bookPages.style.cursor = 'grab';
+            bookPages.classList.remove('dragging');
             bookPages.style.userSelect = '';
             bookPages.style.transform = '';
             bookPages.style.opacity = '';
             
-            // Determine page turn direction
-            if (Math.abs(deltaX) > dragThreshold) {
+            // Determine page turn direction only if significant drag occurred
+            if (hasStartedDrag && Math.abs(deltaX) > dragThreshold) {
                 if (deltaX > 0) {
                     // Dragged right - go to previous page
                     previousPage();
@@ -777,12 +784,19 @@ function initPublicationsBook() {
             }
             
             isDragging = false;
+            hasStartedDrag = false;
         });
 
-        // Set initial cursor style
-        bookPages.addEventListener('mouseenter', function() {
-            if (book.classList.contains('opened')) {
-                bookPages.style.cursor = 'grab';
+        // Reset cursor when leaving book area
+        bookPages.addEventListener('mouseleave', function() {
+            if (isDragging) {
+                // Reset if dragging and mouse leaves area
+                bookPages.classList.remove('dragging');
+                bookPages.style.userSelect = '';
+                bookPages.style.transform = '';
+                bookPages.style.opacity = '';
+                isDragging = false;
+                hasStartedDrag = false;
             }
         });
     }
@@ -889,6 +903,11 @@ function initPublicationsBook() {
             currentPage--;
             updateBookDisplay();
             animatePageTurn('backward');
+            
+            // Force refresh on mobile to prevent blank pages
+            if (isMobileView()) {
+                setTimeout(forcePageRefresh, 100);
+            }
         }
     }
 
@@ -899,24 +918,67 @@ function initPublicationsBook() {
             currentPage++;
             updateBookDisplay();
             animatePageTurn('forward');
+            
+            // Force refresh on mobile to prevent blank pages
+            if (isMobileView()) {
+                setTimeout(forcePageRefresh, 100);
+            }
+        }
+    }
+
+    // Force page refresh to prevent blank pages on mobile
+    function forcePageRefresh() {
+        const currentVisiblePage = bookPages.querySelector('.book-page:not(.hidden)');
+        if (currentVisiblePage && isMobileView()) {
+            currentVisiblePage.style.transform = 'translateZ(0)'; // Force GPU layer
+            currentVisiblePage.style.display = 'block';
+            currentVisiblePage.style.visibility = 'visible';
+            currentVisiblePage.style.opacity = '1';
+            
+            // Trigger reflow
+            currentVisiblePage.offsetHeight;
+            
+            // Reset transform
+            setTimeout(() => {
+                currentVisiblePage.style.transform = '';
+            }, 10);
         }
     }
 
     // Update book display
     function updateBookDisplay() {
         const pages = bookPages.querySelectorAll('.book-page');
+        const isMobile = isMobileView();
         
         pages.forEach((page, index) => {
             const pageIndex = parseInt(page.dataset.pageIndex);
             
-            if (pageIndex < currentPage) {
-                page.classList.add('hidden');
-                page.classList.remove('flipping');
-            } else if (pageIndex === currentPage) {
-                page.classList.remove('hidden', 'flipping');
+            if (isMobile) {
+                // Mobile: show only the current page
+                if (pageIndex === currentPage) {
+                    page.classList.remove('hidden', 'flipping');
+                    page.style.display = 'block';
+                    page.style.visibility = 'visible';
+                    page.style.opacity = '1';
+                } else {
+                    page.classList.add('hidden');
+                    page.classList.remove('flipping');
+                    page.style.display = 'none';
+                }
             } else {
-                page.classList.add('hidden');
-                page.classList.remove('flipping');
+                // Desktop: show current page pair
+                if (pageIndex < currentPage) {
+                    page.classList.add('hidden');
+                    page.classList.remove('flipping');
+                } else if (pageIndex === currentPage) {
+                    page.classList.remove('hidden', 'flipping');
+                    page.style.display = 'block';
+                    page.style.visibility = 'visible';
+                    page.style.opacity = '1';
+                } else {
+                    page.classList.add('hidden');
+                    page.classList.remove('flipping');
+                }
             }
         });
 
@@ -963,11 +1025,25 @@ function initPublicationsBook() {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(function() {
             const wasOpened = book.classList.contains('opened');
+            const oldCurrentPage = currentPage;
+            
+            // Reset current page if switching layouts and current page is out of bounds
+            const newTotalPages = getTotalPages();
+            if (currentPage >= newTotalPages) {
+                currentPage = Math.max(0, newTotalPages - 1);
+            }
+            
             generatePages();
             updateBookDisplay();
+            
             if (wasOpened) {
                 // Ensure page indicator is updated after resize
                 updatePageIndicator();
+                
+                // Force a repaint to fix any rendering issues
+                bookPages.style.display = 'none';
+                bookPages.offsetHeight; // Trigger reflow
+                bookPages.style.display = 'flex';
             }
         }, 250);
     });
