@@ -694,6 +694,9 @@ function initPublicationsBook() {
         
         // Touch swipe functionality for mobile/tablets
         setupTouchSwipe();
+        
+        // Mobile scroll fix for blank pages
+        setupMobileScrollFix();
 
         // Keyboard navigation
         document.addEventListener('keydown', function(e) {
@@ -723,19 +726,27 @@ function initPublicationsBook() {
         let isDragging = false;
         let startX = 0;
         let currentX = 0;
-        let dragThreshold = 100; // minimum distance to trigger page turn
+        let dragThreshold = 80; // reduced threshold for easier triggering
         let hasStartedDrag = false; // Track if drag has actually started
         
-        bookPages.addEventListener('mousedown', function(e) {
+        // Use the book container instead of just bookPages
+        const dragArea = book;
+        
+        dragArea.addEventListener('mousedown', function(e) {
             if (!book.classList.contains('opened')) return;
+            
+            // Only start drag on the pages area, not the cover
+            const target = e.target.closest('.book-pages');
+            if (!target) return;
             
             isDragging = true;
             hasStartedDrag = false;
             startX = e.clientX;
             currentX = e.clientX;
             
-            // Prevent text selection
+            // Prevent text selection and default behaviors
             e.preventDefault();
+            e.stopPropagation();
         });
 
         document.addEventListener('mousemove', function(e) {
@@ -744,25 +755,26 @@ function initPublicationsBook() {
             currentX = e.clientX;
             const deltaX = currentX - startX;
             
-            // Only start visual feedback if drag distance is significant
-            if (Math.abs(deltaX) > 20) {
+            // Start visual feedback with lower threshold
+            if (Math.abs(deltaX) > 10) {
                 if (!hasStartedDrag) {
                     hasStartedDrag = true;
                     bookPages.classList.add('dragging');
                     bookPages.style.userSelect = 'none';
+                    document.body.style.userSelect = 'none'; // Prevent selection on entire page
                 }
                 
                 // Visual feedback during drag
                 const dragDistance = Math.min(Math.abs(deltaX) / dragThreshold, 1);
-                const opacity = 1 - (dragDistance * 0.15);
+                const opacity = 1 - (dragDistance * 0.1);
                 
-                bookPages.style.transform = `translateX(${deltaX * 0.03}px)`;
+                bookPages.style.transform = `translateX(${deltaX * 0.02}px)`;
                 bookPages.style.opacity = opacity;
             }
         });
 
         document.addEventListener('mouseup', function(e) {
-            if (!isDragging || !book.classList.contains('opened')) return;
+            if (!isDragging) return;
             
             const deltaX = currentX - startX;
             
@@ -771,8 +783,9 @@ function initPublicationsBook() {
             bookPages.style.userSelect = '';
             bookPages.style.transform = '';
             bookPages.style.opacity = '';
+            document.body.style.userSelect = '';
             
-            // Determine page turn direction only if significant drag occurred
+            // Determine page turn direction with lower threshold
             if (hasStartedDrag && Math.abs(deltaX) > dragThreshold) {
                 if (deltaX > 0) {
                     // Dragged right - go to previous page
@@ -788,17 +801,40 @@ function initPublicationsBook() {
         });
 
         // Reset cursor when leaving book area
-        bookPages.addEventListener('mouseleave', function() {
+        dragArea.addEventListener('mouseleave', function() {
             if (isDragging) {
                 // Reset if dragging and mouse leaves area
                 bookPages.classList.remove('dragging');
                 bookPages.style.userSelect = '';
                 bookPages.style.transform = '';
                 bookPages.style.opacity = '';
+                document.body.style.userSelect = '';
                 isDragging = false;
                 hasStartedDrag = false;
             }
         });
+
+        // Prevent context menu during drag
+        dragArea.addEventListener('contextmenu', function(e) {
+            if (hasStartedDrag) {
+                e.preventDefault();
+            }
+        });
+    }
+
+    // Add scroll listener for mobile to fix blank page issue
+    function setupMobileScrollFix() {
+        if (!isMobileView()) return;
+        
+        let scrollTimeout;
+        bookPages.addEventListener('scroll', function() {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                if (book.classList.contains('opened')) {
+                    forcePageRefresh();
+                }
+            }, 50);
+        }, { passive: true });
     }
 
     // Touch swipe functionality
@@ -807,22 +843,33 @@ function initPublicationsBook() {
         let touchStartY = 0;
         let touchEndX = 0;
         let touchEndY = 0;
-        let swipeThreshold = 50; // minimum distance to trigger page turn
+        let swipeThreshold = 40; // reduced threshold for easier swiping
         let isScrolling = false;
+        let isSwiping = false;
         
-        bookPages.addEventListener('touchstart', function(e) {
+        // Use the entire book area for touch events
+        const touchArea = book;
+        
+        touchArea.addEventListener('touchstart', function(e) {
             if (!book.classList.contains('opened')) return;
+            
+            // Only handle touches on the pages area
+            const target = e.target.closest('.book-pages');
+            if (!target) return;
             
             const touch = e.touches[0];
             touchStartX = touch.clientX;
             touchStartY = touch.clientY;
+            touchEndX = touchStartX;
+            touchEndY = touchStartY;
             isScrolling = false;
+            isSwiping = false;
             
             // Add visual feedback
             bookPages.style.transition = 'none';
         }, { passive: true });
 
-        bookPages.addEventListener('touchmove', function(e) {
+        touchArea.addEventListener('touchmove', function(e) {
             if (!book.classList.contains('opened')) return;
             
             const touch = e.touches[0];
@@ -833,27 +880,29 @@ function initPublicationsBook() {
             const deltaY = touchEndY - touchStartY;
             
             // Determine if this is a horizontal swipe or vertical scroll
-            if (Math.abs(deltaY) > Math.abs(deltaX)) {
+            if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 15) {
                 isScrolling = true;
+                resetTouchVisuals();
                 return;
             }
             
-            // Prevent default only for horizontal swipes
-            if (Math.abs(deltaX) > 10 && !isScrolling) {
+            // Start swiping if horizontal movement is significant
+            if (Math.abs(deltaX) > 15 && !isScrolling) {
+                isSwiping = true;
                 e.preventDefault();
                 
                 // Visual feedback during swipe
                 const swipeDistance = Math.min(Math.abs(deltaX) / swipeThreshold, 1);
-                const opacity = 1 - (swipeDistance * 0.2);
-                const translateX = deltaX * 0.1;
+                const opacity = 1 - (swipeDistance * 0.15);
+                const translateX = deltaX * 0.05;
                 
                 bookPages.style.transform = `translateX(${translateX}px)`;
                 bookPages.style.opacity = opacity;
             }
         }, { passive: false });
 
-        bookPages.addEventListener('touchend', function(e) {
-            if (!book.classList.contains('opened') || isScrolling) {
+        touchArea.addEventListener('touchend', function(e) {
+            if (!book.classList.contains('opened')) {
                 resetTouchVisuals();
                 return;
             }
@@ -864,8 +913,8 @@ function initPublicationsBook() {
             // Reset visual state
             resetTouchVisuals();
             
-            // Only process horizontal swipes
-            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > swipeThreshold) {
+            // Only process horizontal swipes if not scrolling
+            if (!isScrolling && isSwiping && Math.abs(deltaX) > swipeThreshold) {
                 if (deltaX > 0) {
                     // Swiped right - go to previous page
                     previousPage();
@@ -874,6 +923,9 @@ function initPublicationsBook() {
                     nextPage();
                 }
             }
+            
+            isScrolling = false;
+            isSwiping = false;
         }, { passive: true });
 
         function resetTouchVisuals() {
@@ -906,7 +958,9 @@ function initPublicationsBook() {
             
             // Force refresh on mobile to prevent blank pages
             if (isMobileView()) {
-                setTimeout(forcePageRefresh, 100);
+                setTimeout(forcePageRefresh, 50);
+                // Additional refresh after animation completes
+                setTimeout(forcePageRefresh, 300);
             }
         }
     }
@@ -921,28 +975,59 @@ function initPublicationsBook() {
             
             // Force refresh on mobile to prevent blank pages
             if (isMobileView()) {
-                setTimeout(forcePageRefresh, 100);
+                setTimeout(forcePageRefresh, 50);
+                // Additional refresh after animation completes
+                setTimeout(forcePageRefresh, 300);
             }
         }
     }
 
     // Force page refresh to prevent blank pages on mobile
     function forcePageRefresh() {
-        const currentVisiblePage = bookPages.querySelector('.book-page:not(.hidden)');
-        if (currentVisiblePage && isMobileView()) {
-            currentVisiblePage.style.transform = 'translateZ(0)'; // Force GPU layer
-            currentVisiblePage.style.display = 'block';
-            currentVisiblePage.style.visibility = 'visible';
-            currentVisiblePage.style.opacity = '1';
-            
-            // Trigger reflow
-            currentVisiblePage.offsetHeight;
-            
-            // Reset transform
-            setTimeout(() => {
-                currentVisiblePage.style.transform = '';
-            }, 10);
-        }
+        if (!isMobileView()) return;
+        
+        // Force complete re-render of the book pages container
+        const allPages = bookPages.querySelectorAll('.book-page');
+        
+        // Hide all pages first
+        allPages.forEach(page => {
+            page.style.display = 'none';
+            page.style.visibility = 'hidden';
+            page.style.opacity = '0';
+        });
+        
+        // Force reflow
+        bookPages.offsetHeight;
+        
+        // Show only the current page
+        allPages.forEach((page, index) => {
+            const pageIndex = parseInt(page.dataset.pageIndex);
+            if (pageIndex === currentPage) {
+                page.style.display = 'block';
+                page.style.visibility = 'visible';
+                page.style.opacity = '1';
+                page.style.transform = 'translateZ(0)'; // Force GPU layer
+                page.classList.remove('hidden');
+                
+                // Trigger another reflow for this specific page
+                page.offsetHeight;
+                
+                // Reset transform after a brief delay
+                setTimeout(() => {
+                    page.style.transform = '';
+                }, 50);
+            } else {
+                page.style.display = 'none';
+                page.classList.add('hidden');
+            }
+        });
+        
+        // Force container refresh
+        bookPages.style.transform = 'translateZ(0)';
+        bookPages.offsetHeight;
+        setTimeout(() => {
+            bookPages.style.transform = '';
+        }, 100);
     }
 
     // Update book display
